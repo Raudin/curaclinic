@@ -48,6 +48,7 @@ The frontend reads `VITE_API_BASE_URL` (default `http://localhost:8080/api`) thr
 - `/login` signs in every role and redirects by RBAC: admin → `/admin`, doctor → `/daily-agenda`, patient → `/`. Front-desk staff use an admin-scoped custom role and land in the admin area.
 - `/signup` creates a patient account and signs in immediately.
 - Access and refresh tokens are stored in localStorage; refresh tokens rotate server-side and the API client uses a single-flight refresh to avoid token-family reuse.
+- Sessions expire after 30 minutes of inactivity (`JWT_SESSION_IDLE_TTL` / `VITE_SESSION_IDLE_MINUTES`); active users keep their session alive through token refreshes.
 - Sidebars and routes are permission-aware. Patients see the patient portal, doctors see agenda/schedule, and clinic staff see the admin area with only the sections their permissions allow.
 
 ## Tests

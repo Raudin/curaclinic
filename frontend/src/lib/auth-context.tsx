@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ApiError, authApi } from '@/lib/api'
-import { authEvents, tokenStore } from '@/lib/auth-storage'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ApiError, authApi, refreshSession } from '@/lib/api'
+import { activityStore, authEvents, tokenStore } from '@/lib/auth-storage'
 import { PERMISSIONS, hasScopePermission, resolvePermissions } from '@/lib/permissions'
 import type { Account, TokenResponse, User } from '@/lib/api-types'
 
@@ -27,6 +27,14 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const ROLE_PRIORITY = ['admin', 'doctor', 'patient'] as const
 
+const DEFAULT_IDLE_MINUTES = 30
+
+function idleTimeoutMs(): number {
+  const configured = Number(import.meta.env.VITE_SESSION_IDLE_MINUTES)
+  const minutes = Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_IDLE_MINUTES
+  return minutes * 60_000
+}
+
 export function homeForRoles(roles: string[], permissions: string[] = []): string {
   const granted = resolvePermissions(roles, permissions)
   for (const role of ROLE_PRIORITY) {
@@ -52,11 +60,6 @@ const emptyState: AuthState = { status: 'loading', user: null, roles: [], permis
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(emptyState)
-  const stateRef = useRef(state)
-
-  useEffect(() => {
-    stateRef.current = state
-  }, [state])
 
   const applyTokens = useCallback((data: TokenResponse) => {
     setState({ status: 'authenticated', user: data.user, roles: data.roles, permissions: data.permissions })
@@ -108,16 +111,114 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [applyAccount, clear])
 
+  const status = state.status
+
   useEffect(() => {
+    if (status !== 'authenticated') return
+
+    const timeoutMs = idleTimeoutMs()
+    const syncIntervalMs = Math.max(60_000, Math.min(timeoutMs / 2, 10 * 60_000))
+    const sharedWriteIntervalMs = 5_000
+    let timer: number | undefined
+    let lastActivityAt = Date.now()
+    let lastSharedWriteAt = lastActivityAt
+    let lastSyncedAt = Date.now()
+    let expired = false
+    activityStore.touch(lastActivityAt)
+
+    // Activity in any tab keeps the session alive in every tab.
+    const latestActivity = () => Math.max(lastActivityAt, activityStore.get())
+
+    const clearTimer = () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      timer = undefined
+    }
+
+    const expire = () => {
+      if (expired) return
+      expired = true
+      clearTimer()
+      const refreshToken = tokenStore.getRefresh()
+      // Clear locally first so the UI signs out even if the API call fails;
+      // tokenStore.clear() also invalidates in-flight refresh responses.
+      clear()
+      void authApi.logout(refreshToken).catch(() => undefined)
+    }
+
+    const schedule = () => {
+      clearTimer()
+      timer = window.setTimeout(checkIdle, Math.max(0, timeoutMs - (Date.now() - latestActivity())))
+    }
+
+    // Re-read shared activity before signing out: another tab may have been
+    // active since this timer was set.
+    function checkIdle() {
+      if (Date.now() - latestActivity() >= timeoutMs) expire()
+      else schedule()
+    }
+
+    const syncSession = () => {
+      if (expired) return
+      const now = Date.now()
+      if (now - lastSyncedAt < syncIntervalMs) return
+      lastSyncedAt = now
+      void refreshSession()
+    }
+
+    const recordActivity = () => {
+      if (expired) return
+      lastActivityAt = Date.now()
+      if (lastActivityAt - lastSharedWriteAt >= sharedWriteIntervalMs) {
+        lastSharedWriteAt = lastActivityAt
+        activityStore.touch(lastActivityAt)
+      }
+      schedule()
+      syncSession()
+    }
+
     const onVisibility = () => {
-      if (document.visibilityState !== 'visible' || stateRef.current.status !== 'authenticated') return
+      if (expired || document.visibilityState !== 'visible') return
+      // Background tabs throttle timers, so compare timestamps instead of
+      // trusting the scheduled callback to have fired on time.
+      if (Date.now() - latestActivity() >= timeoutMs) {
+        expire()
+        return
+      }
+      recordActivity()
       authApi.me().then(applyAccount).catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 401) clear()
       })
     }
+
+    const onRefreshed = () => {
+      lastSyncedAt = Date.now()
+      recordActivity()
+    }
+
+    const activityEvents = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const
+    for (const event of activityEvents) window.addEventListener(event, recordActivity, { passive: true })
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [applyAccount, clear])
+    authEvents.addEventListener('refreshed', onRefreshed)
+    schedule()
+
+    return () => {
+      clearTimer()
+      for (const event of activityEvents) window.removeEventListener(event, recordActivity)
+      document.removeEventListener('visibilitychange', onVisibility)
+      authEvents.removeEventListener('refreshed', onRefreshed)
+    }
+  }, [applyAccount, clear, status])
+
+  useEffect(() => {
+    const onStorage = () => {
+      if (tokenStore.hasSession()) return
+      // Another tab signed out; discard any refresh this tab has in flight.
+      tokenStore.clear()
+      setState({ status: 'anonymous', user: null, roles: [], permissions: [] })
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await authApi.login(email, password)

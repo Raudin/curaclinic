@@ -46,11 +46,25 @@ async function readError(response: Response): Promise<ApiError> {
 
 let refreshPromise: Promise<boolean> | null = null
 
+// Tabs share one refresh token, and the API treats a reused refresh token as
+// theft and revokes the whole session family. Serialize refreshes across tabs
+// so only one tab rotates the pair at a time.
+function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  if (!locks) return fn()
+  return locks.request('curaclinic.refresh', fn)
+}
+
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
-    refreshPromise = (async () => {
+    const startingToken = tokenStore.getRefresh()
+    const epoch = tokenStore.epoch()
+    refreshPromise = withRefreshLock(async () => {
       const refreshToken = tokenStore.getRefresh()
-      if (!refreshToken) return false
+      if (!refreshToken || !startingToken) return false
+      // Another tab rotated the pair while this one waited for the lock; its
+      // new tokens are already in storage.
+      if (refreshToken !== startingToken) return true
       try {
         const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
           method: 'POST',
@@ -58,11 +72,15 @@ async function refreshAccessToken(): Promise<boolean> {
           body: JSON.stringify({ refresh_token: refreshToken }),
         })
         if (!response.ok) {
+          if (tokenStore.epoch() !== epoch) return false
           tokenStore.clear()
           emitSessionExpired()
           return false
         }
         const payload = (await response.json()) as { data: TokenResponse }
+        // A logout or idle timeout may have cleared the session while the
+        // request was in flight; never resurrect it with this response.
+        if (tokenStore.epoch() !== epoch) return false
         tokenStore.set(payload.data.access_token, payload.data.refresh_token)
         emitSessionRefreshed({
           access_token: payload.data.access_token,
@@ -75,11 +93,18 @@ async function refreshAccessToken(): Promise<boolean> {
       } catch {
         return false
       }
-    })().finally(() => {
+    }).finally(() => {
       refreshPromise = null
     })
   }
   return refreshPromise
+}
+
+// refreshSession rotates the token pair even when the access token is still
+// valid. The idle timeout uses this to keep the server-side last-used stamp
+// fresh while the user is active.
+export function refreshSession(): Promise<boolean> {
+  return refreshAccessToken()
 }
 
 const AUTH_PATHS = ['auth/login', 'auth/register', 'auth/refresh']
@@ -98,6 +123,9 @@ export async function requestRaw<T>(path: string, init: RequestInit = {}, retry 
   }
 
   if (response.status === 401 && retry && tokenStore.getRefresh() && !AUTH_PATHS.some(item => path.startsWith(item))) {
+    // Another tab may already have refreshed; retry with its token first.
+    const current = tokenStore.getAccess()
+    if (current && current !== accessToken) return requestRaw<T>(path, init, false)
     const refreshed = await refreshAccessToken()
     if (refreshed) return requestRaw<T>(path, init, false)
   }

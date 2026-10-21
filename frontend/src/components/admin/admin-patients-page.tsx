@@ -87,7 +87,7 @@ export function AdminPatientsPage() {
               <td className="px-4 py-3 text-[10px] text-muted-foreground">{formatDate(user.created_at, 'Africa/Nairobi', { weekday: undefined })}</td>
               <td className="px-4 py-3"><div className="flex justify-end gap-1.5">
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => setAccessUser(user)}><KeyRound size={12} aria-hidden="true" /> Access</Button>
-                {can(PERMISSIONS.adminUsersCreate) && <Button variant="ghost" size="sm" className="gap-1" onClick={() => void toggleStatus(user)}>{user.status === 'active' ? <UserX size={12} aria-hidden="true" /> : <ShieldCheck size={12} aria-hidden="true" />}{user.status === 'active' ? 'Deactivate' : 'Activate'}</Button>}
+                {can(PERMISSIONS.adminUsersUpdate) && <Button variant="ghost" size="sm" className="gap-1" onClick={() => void toggleStatus(user)}>{user.status === 'active' ? <UserX size={12} aria-hidden="true" /> : <ShieldCheck size={12} aria-hidden="true" />}{user.status === 'active' ? 'Deactivate' : 'Activate'}</Button>}
               </div></td>
             </tr>)}
           </tbody>
