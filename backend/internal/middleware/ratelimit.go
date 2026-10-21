@@ -29,6 +29,9 @@ type RateLimitConfig struct {
 	Identity func(*gin.Context) string
 }
 
+// RateLimit rejects requests that exceed cfg.Limit within cfg.Window for the
+// identity resolved by cfg.Identity. A nil client or non-positive limit
+// disables limiting.
 func RateLimit(rdb *redis.Client, log *zap.Logger, cfg RateLimitConfig) gin.HandlerFunc {
 	identity := cfg.Identity
 	if identity == nil {

@@ -44,6 +44,8 @@ func (c *PermissionCache) key(version string, userID uuid.UUID) string {
 	return fmt.Sprintf("rbac:perms:%s:%s", version, userID)
 }
 
+// Get returns the cached access for a user, the RBAC version it was read
+// under, and whether the cache reported a hit.
 func (c *PermissionCache) Get(ctx context.Context, userID uuid.UUID) (domain.UserAccess, string, bool) {
 	version, ok := c.version(ctx)
 	if !ok {

@@ -1,5 +1,7 @@
 package domain
 
+// Permission codes are stable, scoped capabilities checked by RBAC.
+// They are shared with the frontend and seeded through AllPermissions.
 const (
 	PermAppointmentsViewOwn       = "appointments.view_own"
 	PermAppointmentsCreateSelf    = "appointments.create_self"

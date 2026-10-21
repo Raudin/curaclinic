@@ -11,6 +11,7 @@ import (
 	"curaclinic/backend/internal/platform/clock"
 )
 
+// MemoryHoldStore is a process-local hold store for tests and single-instance runs.
 type MemoryHoldStore struct {
 	mu     sync.Mutex
 	holds  map[string]Hold

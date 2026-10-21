@@ -1,3 +1,4 @@
+// Command seed seeds RBAC reference data and optional demo content.
 package main
 
 import (
