@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.log
+logs
+.tools
+coverage.out
+dist
+tmp
+README.md
+docker-compose.yml
+Dockerfile
+.dockerignore
