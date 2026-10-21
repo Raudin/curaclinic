@@ -11,9 +11,6 @@ import (
 	"curaclinic/backend/internal/platform/clock"
 )
 
-// MemoryHoldStore is a development-only, single-process implementation of the
-// hold store used when Redis is unavailable. It implements the same semantics
-// (atomic create-if-absent, TTL, ownership, daily index) for local development.
 type MemoryHoldStore struct {
 	mu     sync.Mutex
 	holds  map[string]Hold

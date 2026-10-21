@@ -6,9 +6,13 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 
@@ -80,9 +84,30 @@ func BadRequest(c *gin.Context, log *zap.Logger, message string, details map[str
 	WriteError(c, log, domain.Validation(message, details))
 }
 
+var registerFieldNames sync.Once
+
+// useJSONFieldNames makes validator report fields by their JSON names, so
+// clients see "role_ids[1]" or "intervals[0].start_time" rather than Go names.
+func useJSONFieldNames() {
+	registerFieldNames.Do(func() {
+		engine, ok := binding.Validator.Engine().(*validator.Validate)
+		if !ok {
+			return
+		}
+		engine.RegisterTagNameFunc(func(field reflect.StructField) string {
+			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+			if name == "-" {
+				return ""
+			}
+			return name
+		})
+	})
+}
+
 // BindBody decodes and validates a JSON body. It writes a 400 response and
 // returns false when binding fails.
 func BindBody(c *gin.Context, log *zap.Logger, target any) bool {
+	useJSONFieldNames()
 	if err := c.ShouldBindJSON(target); err != nil {
 		WriteError(c, log, bindError(err))
 		return false
@@ -95,8 +120,7 @@ func bindError(err error) error {
 	if errors.As(err, &validationErrs) {
 		details := make(map[string]any, len(validationErrs))
 		for _, fieldErr := range validationErrs {
-			field := toSnakeCase(fieldErr.Field())
-			details[field] = validationMessage(fieldErr)
+			details[fieldPath(fieldErr)] = validationMessage(fieldErr)
 		}
 		return domain.Validation("request validation failed", details)
 	}
@@ -105,6 +129,13 @@ func bindError(err error) error {
 	if errors.As(err, &typeErr) {
 		field := toSnakeCase(typeErr.Field)
 		return domain.Validation("request validation failed", map[string]any{field: "has the wrong type"})
+	}
+
+	var timeErr *time.ParseError
+	if errors.As(err, &timeErr) {
+		return domain.Validation("request validation failed", map[string]any{
+			"timestamp": "must be an RFC3339 timestamp such as 2026-01-31T09:00:00Z",
+		})
 	}
 
 	var syntaxErr *json.SyntaxError
@@ -119,6 +150,31 @@ func bindError(err error) error {
 	return domain.Validation("invalid request body", nil)
 }
 
+// fieldPath returns the JSON path of the failing field without the root
+// struct name, e.g. "intervals[0].start_time".
+func fieldPath(fieldErr validator.FieldError) string {
+	path := fieldErr.Namespace()
+	if _, rest, found := strings.Cut(path, "."); found {
+		path = rest
+	}
+	if path == "" {
+		path = fieldErr.Field()
+	}
+	return toSnakeCase(path)
+}
+
+// sizeUnit describes what min/max/len count for the field's kind.
+func sizeUnit(fieldErr validator.FieldError) string {
+	switch fieldErr.Kind() {
+	case reflect.String:
+		return " characters"
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return " items"
+	default:
+		return ""
+	}
+}
+
 func validationMessage(fieldErr validator.FieldError) string {
 	switch fieldErr.Tag() {
 	case "required":
@@ -128,9 +184,9 @@ func validationMessage(fieldErr validator.FieldError) string {
 	case "uuid", "uuid4":
 		return "must be a valid UUID"
 	case "min":
-		return "must be at least " + fieldErr.Param()
+		return "must be at least " + fieldErr.Param() + sizeUnit(fieldErr)
 	case "max":
-		return "must be at most " + fieldErr.Param()
+		return "must be at most " + fieldErr.Param() + sizeUnit(fieldErr)
 	case "gte":
 		return "must be greater than or equal to " + fieldErr.Param()
 	case "lte":
@@ -138,7 +194,9 @@ func validationMessage(fieldErr validator.FieldError) string {
 	case "oneof":
 		return "must be one of: " + fieldErr.Param()
 	case "len":
-		return "must be exactly " + fieldErr.Param() + " characters"
+		return "must be exactly " + fieldErr.Param() + sizeUnit(fieldErr)
+	case "datetime":
+		return "must be a date in YYYY-MM-DD format"
 	default:
 		return "is invalid"
 	}

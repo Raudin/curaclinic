@@ -1,8 +1,5 @@
 package domain
 
-// Patient permissions are built into the patient identity and are not stored
-// in the RBAC tables. Doctor and admin codes are seeded and assigned through
-// scoped roles and direct grants.
 const (
 	PermAppointmentsViewOwn       = "appointments.view_own"
 	PermAppointmentsCreateSelf    = "appointments.create_self"
@@ -35,8 +32,6 @@ const (
 	PermAdminAppointmentsCancel = "admin.appointments.cancel_any"
 	PermAdminAppointmentsMove   = "admin.appointments.reschedule_any"
 
-	// Legacy names remain aliases for service code that distinguishes patient
-	// and clinic-wide appointment actions.
 	PermAppointmentsViewAny        = PermAdminAppointmentsView
 	PermAppointmentsCreateManual   = PermDoctorAppointmentsCreate
 	PermAppointmentsCancelAny      = PermAdminAppointmentsCancel

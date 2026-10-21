@@ -1,11 +1,3 @@
-// Command seed creates the bootstrap admin and optional demo data.
-//
-// Usage:
-//
-//	go run ./cmd/seed
-//	go run ./cmd/seed --demo
-//
-// The command is idempotent: existing users are left untouched.
 package main
 
 import (

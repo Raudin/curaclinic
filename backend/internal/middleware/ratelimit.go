@@ -29,8 +29,6 @@ type RateLimitConfig struct {
 	Identity func(*gin.Context) string
 }
 
-// RateLimit enforces a Redis fixed-window limit. It fails open when Redis is
-// unavailable so a cache outage cannot take the API down.
 func RateLimit(rdb *redis.Client, log *zap.Logger, cfg RateLimitConfig) gin.HandlerFunc {
 	identity := cfg.Identity
 	if identity == nil {

@@ -18,8 +18,6 @@ import (
 // UserLoader loads the authenticated user's current state.
 type UserLoader interface {
 	GetActiveUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
-	// SessionActive reports whether the session an access token was issued
-	// for has not been revoked by logout, reuse detection or a password change.
 	SessionActive(ctx context.Context, sessionID uuid.UUID) (bool, error)
 }
 

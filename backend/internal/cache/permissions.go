@@ -44,10 +44,6 @@ func (c *PermissionCache) key(version string, userID uuid.UUID) string {
 	return fmt.Sprintf("rbac:perms:%s:%s", version, userID)
 }
 
-// Get returns a cached access snapshot. On a miss it also returns the RBAC
-// version it looked under (empty when caching is unavailable); pass that
-// version to Set so a snapshot loaded before an invalidation is never stored
-// under the newer version.
 func (c *PermissionCache) Get(ctx context.Context, userID uuid.UUID) (domain.UserAccess, string, bool) {
 	version, ok := c.version(ctx)
 	if !ok {
