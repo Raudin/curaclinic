@@ -1,6 +1,6 @@
 # CuraClinic Backend
 
-Go 1.26 + Gin API for clinic scheduling: JWT authentication, database-backed RBAC with per-user overrides, recurring doctor schedules, Redis slot holds, dynamic availability and appointment history.
+Go 1.27 + Gin API for clinic scheduling: JWT authentication, database-backed RBAC with per-user overrides, recurring doctor schedules, Redis slot holds, dynamic availability and appointment history.
 
 ## Stack
 
@@ -38,7 +38,7 @@ curl http://localhost:8080/api/ready
 
 ### Option B — Local Go process (no Redis required)
 
-Requirements: Go 1.26+, PostgreSQL 18 binaries (the project-local cluster script uses them).
+Requirements: Go 1.27+, PostgreSQL 18 binaries (the project-local cluster script uses them).
 
 ```powershell
 cd backend

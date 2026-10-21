@@ -1,6 +1,6 @@
 module curaclinic/backend
 
-go 1.26.9
+go 1.27.3
 
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
