@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Stethoscope } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, Languages, LoaderCircle, Stethoscope, UserRound } from 'lucide-react'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/arc/calendar/calendar'
+import { MorphSelect } from '@/components/arc/morph-select/morph-select'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Textarea } from '@/components/arc/textarea/textarea'
 import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/shared/page'
@@ -35,6 +37,7 @@ function splitSlots(slots: Slot[], timeZone: string) {
 export function BookAppointmentPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { notify } = useToast()
   const { roles } = useAuth()
+  const reduceMotion = useReducedMotion()
   const rescheduleId = useMemo(() => new URLSearchParams(window.location.search).get('reschedule'), [])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [doctorId, setDoctorId] = useState<string | null>(null)
@@ -133,7 +136,6 @@ export function BookAppointmentPage({ onNavigate }: { onNavigate: (path: string)
     if (id === doctorId) return
     await releaseHold()
     setDoctorId(id)
-    setStep(1)
     setSelectedDate(dateKeyInZone(new Date(), DEFAULT_TIMEZONE))
   }
 
@@ -215,7 +217,7 @@ export function BookAppointmentPage({ onNavigate }: { onNavigate: (path: string)
       <Stepper
         steps={BOOKING_STEPS}
         current={step}
-        onStepSelect={index => { if (index !== 0 || !reschedule) setStep(index) }}
+        onStepSelect={index => { if ((index === 0 && reschedule) || (index >= 1 && !doctorId) || (index === 2 && !selectedSlot)) return; setStep(index) }}
         details="current"
         label="Booking progress"
         className="mb-5"
@@ -223,32 +225,71 @@ export function BookAppointmentPage({ onNavigate }: { onNavigate: (path: string)
 
       {error && <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{error}</div>}
 
-      {step === 0 && !reschedule && <section aria-label="Choose a provider">
-        {doctors.length === 0 ? <LoadingState label="Loading doctors…" /> : acceptingDoctors.length === 0 ? <EmptyState title="No doctors are accepting appointments" description="Please contact the clinic to arrange a visit." /> : <div className="grid gap-3 sm:grid-cols-2">
-          {acceptingDoctors.map(item => <button
-            key={item.id}
-            type="button"
-            onClick={() => void chooseDoctor(item.id)}
-            className="group flex gap-3 rounded-2xl border border-border bg-background p-4 text-left transition hover:border-neutral-400 hover:shadow-sm"
+      {step === 0 && !reschedule && (doctors.length === 0 ? <LoadingState label="Loading doctors…" /> : acceptingDoctors.length === 0 ? <EmptyState title="No doctors are accepting appointments" description="Please contact the clinic to arrange a visit." /> : <section aria-label="Choose a provider" className="grid items-start gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-border bg-background p-4 sm:p-5">
+          <h2 className="text-sm font-semibold">Who would you like to see?</h2>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Search by name or specialty. {acceptingDoctors.length} {acceptingDoctors.length === 1 ? 'doctor is' : 'doctors are'} accepting new appointments.</p>
+          <MorphSelect
+            label="Doctor"
+            hideLabel
+            className="mt-4"
+            value={doctorId}
+            items={acceptingDoctors.map(item => ({
+              value: item.id,
+              label: `Dr. ${item.first_name} ${item.last_name}`,
+              meta: item.specialty,
+              keywords: `${item.specialty} ${item.languages.join(' ')}`,
+              icon: <Avatar name={`${item.first_name} ${item.last_name}`} src={item.avatar_url} size="sm" />,
+            }))}
+            onValueChange={value => void chooseDoctor(value)}
+            searchable="auto"
+            searchPlaceholder="Search doctors or specialties"
+            placeholder="Select a doctor"
+            panelWidth={320}
+          />
+        </div>
+
+        {/* The profile card only appears once a doctor is picked; the dashed slot holds its place so the layout doesn't jump. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {doctor ? <motion.div
+            key={doctor.id}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="rounded-2xl border border-border bg-background p-4 sm:p-5"
+            aria-live="polite"
           >
-            <Avatar name={`${item.first_name} ${item.last_name}`} src={item.avatar_url} size="lg" className="shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">Dr. {item.first_name} {item.last_name}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">{item.specialty}</p>
+            <div className="flex items-start gap-3 sm:gap-4">
+              <Avatar name={`${doctor.first_name} ${doctor.last_name}`} src={doctor.avatar_url} size="xl" className="shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold tracking-tight">Dr. {doctor.first_name} {doctor.last_name}</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">{doctor.specialty}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge tone="neutral" size="sm">{doctor.experience_years} years experience</Badge>
+                  <Badge tone="neutral" size="sm">{doctor.slot_minutes}-minute visits</Badge>
                 </div>
-                <ArrowRight size={15} className="mt-1 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" aria-hidden="true" />
-              </div>
-              <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{item.bio || 'Available for in-clinic consultations.'}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge tone="neutral" size="sm">{item.experience_years} years</Badge>
-                {item.languages.slice(0, 2).map(language => <Badge key={language} tone="neutral" size="sm">{language}</Badge>)}
               </div>
             </div>
-          </button>)}
-        </div>}
-      </section>}
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{doctor.bio || 'Available for in-clinic consultations.'}</p>
+            {doctor.languages.length > 0 && <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground"><Languages size={13} aria-hidden="true" /> Speaks {doctor.languages.join(', ')}</p>}
+            <div className="mt-4 flex justify-end border-t border-border pt-3">
+              <Button size="sm" className="w-full gap-1.5 sm:w-auto" onClick={() => setStep(1)}>Choose a date & time <ArrowRight size={13} aria-hidden="true" /></Button>
+            </div>
+          </motion.div> : <motion.div
+            key="placeholder"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="hidden min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-6 text-center lg:flex"
+          >
+            <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"><UserRound size={18} aria-hidden="true" /></span>
+            <p className="text-xs font-semibold">No doctor selected</p>
+            <p className="max-w-xs text-[11px] text-muted-foreground">Pick a doctor on the left to see their profile and continue to available times.</p>
+          </motion.div>}
+        </AnimatePresence>
+      </section>)}
 
       {step === 1 && <section aria-label="Choose a date and time">
         {doctor && <div className="mb-4 flex items-center gap-3 rounded-2xl bg-muted/50 px-3 py-2.5">

@@ -70,6 +70,14 @@ export function ScheduleEditor({ doctorId, timezone = DEFAULT_TIMEZONE, slotMinu
     setIntervals(current => current.filter((_, position) => position !== index))
   }
 
+  function copyIntervals(fromWeekday: number, toWeekdays: number[]) {
+    setIntervals(current => {
+      const source = current.filter(interval => interval.weekday === fromWeekday)
+      const kept = current.filter(interval => !toWeekdays.includes(interval.weekday))
+      return [...kept, ...toWeekdays.flatMap(weekday => source.map(interval => ({ ...interval, weekday })))]
+    })
+  }
+
   async function saveIntervals() {
     setSaving(true)
     setError(null)
@@ -143,6 +151,7 @@ export function ScheduleEditor({ doctorId, timezone = DEFAULT_TIMEZONE, slotMinu
       onAdd={addInterval}
       onUpdate={updateInterval}
       onRemove={removeInterval}
+      onCopy={copyIntervals}
       onSave={() => void saveIntervals()}
     />
     <TimeBlocksCard

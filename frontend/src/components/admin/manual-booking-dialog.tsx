@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, LoaderCircle, Search } from 'lucide-react'
+import { MorphSelect } from '@/components/arc/morph-select/morph-select'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SlotPicker } from '@/components/shared/slot-picker'
@@ -70,12 +71,27 @@ export function ManualBookingDialog({ open, onOpenChange, onBooked }: {
           <div className="relative mt-1"><Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><input value={patient ? `${patient.first_name} ${patient.last_name}` : search} onChange={event => { setPatient(null); setSearch(event.target.value) }} placeholder="Search patient by name or email" className="h-9 w-full rounded-md border border-border bg-background pl-7 pr-2 text-xs" /></div>
           {patients.length > 0 && !patient && <div className="mt-1 overflow-hidden rounded-lg border border-border bg-card">{patients.map(item => <button key={item.id} type="button" className="block w-full px-2 py-1.5 text-left text-[11px] hover:bg-muted" onClick={() => { setPatient(item); setPatients([]) }}><span className="font-semibold">{item.first_name} {item.last_name}</span><span className="ml-1 text-[10px] text-muted-foreground">{item.email}</span></button>)}</div>}
         </label>
-        <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Doctor
-          <select value={doctorId} onChange={event => { setDoctorId(event.target.value); setSlot(null) }} className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-xs">
-            <option value="">Choose a doctor…</option>
-            {doctors.map(doctor => <option key={doctor.id} value={doctor.id}>Dr. {doctor.first_name} {doctor.last_name} · {doctor.specialty}</option>)}
-          </select>
-        </label>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground" aria-hidden="true">Doctor</p>
+          <MorphSelect
+            label="Doctor"
+            hideLabel
+            className="mt-1"
+            value={doctorId || null}
+            items={doctors.map(doctor => ({
+              value: doctor.id,
+              label: `Dr. ${doctor.first_name} ${doctor.last_name}`,
+              meta: doctor.specialty,
+              keywords: doctor.email,
+            }))}
+            onValueChange={value => { setDoctorId(value); setSlot(null) }}
+            searchable
+            searchPlaceholder="Search doctors"
+            placeholder={doctors.length ? 'Choose a doctor' : 'No doctors accepting'}
+            disabled={doctors.length === 0}
+            maxListHeight={240}
+          />
+        </div>
       </div>
       {doctorId ? <SlotPicker key={doctorId} doctorId={doctorId} selected={slot} onSelect={setSlot} /> : <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-[11px] text-muted-foreground">Select a doctor to see open times.</p>}
       <input value={reason} onChange={event => setReason(event.target.value)} placeholder="Reason for visit" className="h-9 rounded-md border border-border bg-background px-2 text-xs" />

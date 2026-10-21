@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList, Settings } from 'lucide-react'
+import { CalendarDays, CalendarRange, ClipboardList, Settings } from 'lucide-react'
 import { AppSidebar } from '@/components/app-sidebar'
 import type { SidebarLink } from '@/components/app-sidebar'
 
@@ -9,6 +9,7 @@ type ClinicianSidebarProps = {
 
 const clinicianLinks: SidebarLink[] = [
   { label: 'Daily agenda', path: '/daily-agenda', icon: CalendarDays },
+  { label: 'My appointments', path: '/doctor-appointments', icon: CalendarRange },
   { label: 'Schedule & availability', path: '/schedule-availability', icon: ClipboardList },
 ]
 

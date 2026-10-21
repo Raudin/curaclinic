@@ -49,7 +49,7 @@ export function AuthenticatedShell({ pathname, onNavigate }: { pathname: string;
   const { roles, permissions, can, canAny, canAll } = useAuth()
   const variant = roleVariant(roles, permissions)
   const isAdminArea = pathname.startsWith('/admin')
-  const isClinicianArea = pathname === '/daily-agenda' || pathname === '/schedule-availability'
+  const isClinicianArea = pathname === '/daily-agenda' || pathname === '/doctor-appointments' || pathname === '/schedule-availability'
   const isSharedSettings = pathname === '/settings'
   const isRescheduleForClinician = variant === 'clinician' && pathname === '/book-appointment' && new URLSearchParams(window.location.search).has('reschedule')
   const isPatientArea = !isAdminArea && !isClinicianArea && !isSharedSettings && !isRescheduleForClinician
@@ -57,7 +57,7 @@ export function AuthenticatedShell({ pathname, onNavigate }: { pathname: string;
   if (isAdminArea && variant !== 'admin') return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
   if (isClinicianArea && variant !== 'clinician') return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
   if (isPatientArea && variant !== 'patient') return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
-  if (pathname === '/daily-agenda' && !can(PERMISSIONS.doctorAppointmentsViewOwn)) return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
+  if ((pathname === '/daily-agenda' || pathname === '/doctor-appointments') && !can(PERMISSIONS.doctorAppointmentsViewOwn)) return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
   if (pathname === '/schedule-availability' && !can(PERMISSIONS.doctorScheduleView)) return <AccessDenied onHome={() => onNavigate(homeForRoles(roles, permissions))} />
   if (pathname === '/admin/roles' && !canAll(PERMISSIONS.adminRolesManage, PERMISSIONS.adminPermissionsManage)) return <AccessDenied onHome={() => onNavigate('/admin')} />
   if (pathname === '/admin/schedule' && !(can(PERMISSIONS.adminWorkingHours) && canAny(PERMISSIONS.adminUsersView, PERMISSIONS.doctorsView, PERMISSIONS.doctorPatientsView))) return <AccessDenied onHome={() => onNavigate('/admin')} />
