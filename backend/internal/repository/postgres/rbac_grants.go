@@ -107,8 +107,8 @@ func guardLastAdmin(ctx context.Context, q *dbgen.Queries, message string, chang
 	if err != nil {
 		return err
 	}
-	if err := change(); err != nil {
-		return err
+	if changeErr := change(); changeErr != nil {
+		return changeErr
 	}
 	after, err := q.CountActiveAdmins(ctx)
 	if err != nil {

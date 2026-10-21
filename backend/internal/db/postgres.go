@@ -1,3 +1,4 @@
+// Package db opens the PostgreSQL connection pool and runs transactions.
 package db
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// NewPostgres opens a tuned connection pool and verifies it with a ping.
 func NewPostgres(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
@@ -34,6 +36,8 @@ func NewPostgres(ctx context.Context, databaseURL string) (*pgxpool.Pool, error)
 	return pool, nil
 }
 
+// WithTx runs fn in a transaction, committing on success and rolling back on
+// error or panic.
 func WithTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) (err error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {

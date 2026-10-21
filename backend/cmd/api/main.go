@@ -1,3 +1,4 @@
+// Command api runs the CuraClinic HTTP API server.
 package main
 
 import (

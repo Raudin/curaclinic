@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// NewUser is the data needed to create a user account.
 type NewUser struct {
 	ID           uuid.UUID
 	Email        string
@@ -18,6 +19,7 @@ type NewUser struct {
 	Status       string
 }
 
+// NewSession is the data needed to store a refresh-token session.
 type NewSession struct {
 	ID               uuid.UUID
 	UserID           uuid.UUID
@@ -28,6 +30,7 @@ type NewSession struct {
 	UserAgent        string
 }
 
+// AuditEntry is one audit log record to write.
 type AuditEntry struct {
 	ActorID      *uuid.UUID
 	Action       string
@@ -37,6 +40,7 @@ type AuditEntry struct {
 	Meta         RequestMeta
 }
 
+// AppointmentFilter narrows an appointment listing query.
 type AppointmentFilter struct {
 	PatientID *uuid.UUID
 	DoctorID  *uuid.UUID
@@ -49,6 +53,7 @@ type AppointmentFilter struct {
 	Offset    int
 }
 
+// AuditFilter narrows an audit log listing query.
 type AuditFilter struct {
 	ResourceType *string
 	ResourceID   *string
@@ -56,6 +61,8 @@ type AuditFilter struct {
 	Limit        int
 	Offset       int
 }
+
+// NewDoctorProfile is the data needed to create a doctor profile.
 type NewDoctorProfile struct {
 	UserID              uuid.UUID
 	Specialty           string
@@ -67,6 +74,7 @@ type NewDoctorProfile struct {
 	IsAcceptingPatients bool
 }
 
+// DoctorFilter narrows a doctor listing query.
 type DoctorFilter struct {
 	Specialty *string
 	Accepting *bool

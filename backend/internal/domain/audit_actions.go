@@ -1,5 +1,6 @@
 package domain
 
+// Audit log action names.
 const (
 	AuditUserCreated            = "user.created"
 	AuditUserStatusUpdated      = "user.status_updated"
@@ -20,6 +21,7 @@ const (
 	AuditAppointmentRescheduled = "appointment.rescheduled"
 )
 
+// Audit log resource types.
 const (
 	ResourceUser        = "user"
 	ResourceRole        = "role"

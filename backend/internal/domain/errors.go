@@ -2,8 +2,10 @@ package domain
 
 import "errors"
 
+// ErrorCode is a stable, machine-readable error identifier returned to clients.
 type ErrorCode string
 
+// Error codes, mapped to HTTP statuses by httpx.StatusFor.
 const (
 	CodeValidation      ErrorCode = "validation_failed"
 	CodeUnauthorized    ErrorCode = "unauthorized"
@@ -17,6 +19,8 @@ const (
 	CodeInternal        ErrorCode = "internal_error"
 )
 
+// Error is a domain error carrying a code, a client-safe message and an
+// optional internal cause.
 type Error struct {
 	Code    ErrorCode
 	Message string
@@ -33,6 +37,8 @@ func (e *Error) Error() string {
 
 func (e *Error) Unwrap() error { return e.Cause }
 
+// Is matches any domain error with the same code, so errors.Is works with the
+// sentinel errors below.
 func (e *Error) Is(target error) bool {
 	other, ok := target.(*Error)
 	if !ok {
@@ -41,24 +47,29 @@ func (e *Error) Is(target error) bool {
 	return e.Code == other.Code
 }
 
+// NewError creates a domain error.
 func NewError(code ErrorCode, message string) *Error {
 	return &Error{Code: code, Message: message}
 }
 
+// Validation creates a validation error with per-field details.
 func Validation(message string, details map[string]any) *Error {
 	return &Error{Code: CodeValidation, Message: message, Details: details}
 }
 
+// ValidationField creates a validation error for a single field.
 func ValidationField(field, message string) *Error {
 	return Validation("invalid request", map[string]any{field: message})
 }
 
+// WithCause returns a copy of the error that wraps an internal cause.
 func (e *Error) WithCause(err error) *Error {
 	clone := *e
 	clone.Cause = err
 	return &clone
 }
 
+// IsCode reports whether err is a domain error with the given code.
 func IsCode(err error, code ErrorCode) bool {
 	var domainErr *Error
 	if errors.As(err, &domainErr) {

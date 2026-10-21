@@ -1,3 +1,4 @@
+// Command migrate applies or rolls back the embedded database migrations.
 package main
 
 import (
