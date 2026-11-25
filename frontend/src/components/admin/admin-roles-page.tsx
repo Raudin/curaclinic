@@ -187,11 +187,11 @@ export function AdminRolesPage() {
   }
 
   return <main className="mx-auto w-full max-w-[1200px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
-    <PageHeader eyebrow="Access control" title="Roles & permissions" description="Control which parts of CuraClinic each role can access." actions={<Button className="gap-2" onClick={openCreate} disabled={saving || pendingRoles.length > 0}><Plus size={15} aria-hidden="true" /> New role</Button>} />
+    <PageHeader title="Roles & permissions" description="Control which parts of CuraClinic each role can access." actions={<Button className="gap-2" onClick={openCreate} disabled={saving || pendingRoles.length > 0}><Plus size={15} aria-hidden="true" /> New role</Button>} />
     {error && <ErrorState message={error} onRetry={load} />}
     {loading && !error ? <LoadingState label="Loading roles…" /> : null}
     {!loading && !error && <>
-      <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} aria-hidden="true" /> CuraClinic · {roles.length} roles</div>
+      <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck size={14} aria-hidden="true" /> {roles.length} {roles.length === 1 ? 'role' : 'roles'}</div>
       {saveError && <p role="alert" className="mb-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive">{saveError}</p>}
       <RolesPermissions
         roles={roles}
@@ -201,9 +201,9 @@ export function AdminRolesPage() {
         onTogglePermission={togglePermission}
         onToggleGroup={toggleGroup}
         renderRoleActions={role => <>
-          <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={`Edit ${role.name} role`} title="Edit role" onClick={() => openEdit(role)} disabled={saving || pendingRoles.length > 0}><Pencil size={12} aria-hidden="true" /></Button>
-          <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={`Duplicate ${role.name} role`} title="Duplicate role" onClick={() => duplicateRole(role)} disabled={saving || pendingRoles.length > 0}><Copy size={12} aria-hidden="true" /></Button>
-          {!role.is_system && <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" aria-label={`Delete ${role.name} role`} title="Delete role" onClick={() => void remove(role)} disabled={saving || pendingRoles.length > 0}><Trash2 size={12} aria-hidden="true" /></Button>}
+          <Button type="button" variant="ghost" size="sm" className="size-9 p-0" aria-label={`Edit ${role.name} role`} title="Edit role" onClick={() => openEdit(role)} disabled={saving || pendingRoles.length > 0}><Pencil size={12} aria-hidden="true" /></Button>
+          <Button type="button" variant="ghost" size="sm" className="size-9 p-0" aria-label={`Duplicate ${role.name} role`} title="Duplicate role" onClick={() => duplicateRole(role)} disabled={saving || pendingRoles.length > 0}><Copy size={12} aria-hidden="true" /></Button>
+          {!role.is_system && <Button type="button" variant="ghost" size="sm" className="size-9 p-0 text-muted-foreground hover:text-destructive" aria-label={`Delete ${role.name} role`} title="Delete role" onClick={() => void remove(role)} disabled={saving || pendingRoles.length > 0}><Trash2 size={12} aria-hidden="true" /></Button>}
         </>}
       />
       </>}
@@ -230,8 +230,8 @@ export function AdminRolesPage() {
         </div>
         <div className="max-h-[45vh] space-y-3 overflow-y-auto rounded-xl border border-border p-3">
           {Object.entries(grouped).map(([resource, list]) => <fieldset key={resource} disabled={saving || editing?.name === 'admin'}>
-            <legend className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{resource}</legend>
-            <div className="mt-1 grid gap-1 sm:grid-cols-2">{list.map(permission => <label key={permission.id} className="flex items-center gap-2 text-[11px]"><input type="checkbox" className="size-3.5 accent-neutral-950" checked={selected.includes(permission.code)} disabled={saving} onChange={event => setSelected(current => event.target.checked ? [...current, permission.code] : current.filter(code => code !== permission.code))} /><span>{permission.action.replaceAll('_', ' ')}</span></label>)}</div>
+            <legend className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{resource}</legend>
+            <div className="mt-1 grid gap-1 sm:grid-cols-2">{list.map(permission => <label key={permission.id} className="flex items-center gap-2 text-xs"><input type="checkbox" className="size-3.5 accent-neutral-950" checked={selected.includes(permission.code)} disabled={saving} onChange={event => setSelected(current => event.target.checked ? [...current, permission.code] : current.filter(code => code !== permission.code))} /><span>{permission.action.replaceAll('_', ' ')}</span></label>)}</div>
           </fieldset>)}
         </div>
         <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button><Button onClick={() => void saveRole()} disabled={saving || !name.trim()}>{saving && <LoaderCircle size={13} className="animate-spin" aria-hidden="true" />} {editing ? 'Save role' : 'Create role'}</Button></DialogFooter>
@@ -242,7 +242,7 @@ export function AdminRolesPage() {
 
 function AnimateReviewBar({ dirty, saving, count, onDiscard, onSave }: { dirty: boolean; saving: boolean; count: number; onDiscard: () => void; onSave: () => void }) {
   const reduced = useReducedMotion() ?? false
-  return <AnimatePresence>{dirty && <motion.div className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-[min(640px,calc(100%-2rem))] items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:bottom-6 sm:px-5" initial={{ opacity: 0, y: reduced ? 0 : 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : 18 }} transition={{ duration: reduced ? 0 : .18 }}>
+  return <AnimatePresence>{dirty && <motion.div className="fixed inset-x-0 bottom-4 z-40 mx-auto flex flex-wrap w-[min(640px,calc(100%-2rem))] items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:bottom-6 sm:px-5" initial={{ opacity: 0, y: reduced ? 0 : 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : 18 }} transition={{ duration: reduced ? 0 : .18 }}>
     <p className="text-xs font-medium">Unsaved changes <span className="text-muted-foreground">· {count} role{count === 1 ? '' : 's'} updated</span></p>
     <div className="flex shrink-0 gap-2"><Button variant="ghost" size="sm" onClick={onDiscard} disabled={saving}>Discard</Button><Button size="sm" className="gap-1.5" onClick={onSave} disabled={saving}>{saving && <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />} Save changes</Button></div>
   </motion.div>}</AnimatePresence>

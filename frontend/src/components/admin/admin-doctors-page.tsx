@@ -58,7 +58,7 @@ export function AdminDoctorsPage({ onNavigate }: { onNavigate: (path: string) =>
   }
 
   return <main className="mx-auto w-full max-w-[1300px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
-    <PageHeader eyebrow="Clinic" title="Doctors" description="Manage clinician profiles, availability and the public directory." actions={canCreate ? <Button className="gap-2" onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /> Add doctor</Button> : undefined} />
+    <PageHeader title="Doctors" description="Manage clinician profiles, availability and the public directory." actions={canCreate ? <Button className="gap-2" onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /> Add doctor</Button> : undefined} />
     {error && <ErrorState message={error} onRetry={load} />}
     {loading && !error ? <LoadingState label="Loading doctors…" /> : null}
     {!loading && !error && doctors.length === 0 ? <EmptyState title="No doctors yet" description="Add a doctor to start building the clinic directory." action={canCreate ? <Button className="gap-2" onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /> Add doctor</Button> : undefined} /> : null}
@@ -80,10 +80,10 @@ export function AdminDoctorsPage({ onNavigate }: { onNavigate: (path: string) =>
         if (!doctor) return null
         return <>
           {canUpdate && <>
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => setEditing(doctor)}><Pencil size={12} aria-hidden="true" /> Edit</Button>
-            <Button variant="ghost" size="sm" className="gap-1" onClick={() => void toggleAccepting(doctor)}><Power size={12} aria-hidden="true" /> {doctor.is_accepting_patients ? 'Pause' : 'Resume'}</Button>
+            <Button variant="outline" size="sm" className="min-h-10 gap-1" onClick={() => setEditing(doctor)}><Pencil size={12} aria-hidden="true" /> Edit</Button>
+            <Button variant="ghost" size="sm" className="min-h-10 gap-1" onClick={() => void toggleAccepting(doctor)}><Power size={12} aria-hidden="true" /> {doctor.is_accepting_patients ? 'Pause intake' : 'Resume intake'}</Button>
           </>}
-          {canSchedule && <Button variant="ghost" size="sm" className="gap-1" onClick={() => onNavigate(`/admin/schedule?doctor=${doctor.id}`)}><CalendarDays size={12} aria-hidden="true" /> Schedule</Button>}
+          {canSchedule && <Button variant="ghost" size="sm" className="min-h-10 gap-1" onClick={() => onNavigate(`/admin/schedule?doctor=${doctor.id}`)}><CalendarDays size={12} aria-hidden="true" /> Schedule</Button>}
           {!canUpdate && !canSchedule && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Stethoscope size={13} aria-hidden="true" /> Read-only directory</span>}
         </>
       }}

@@ -94,6 +94,21 @@ func TestListForcesPatientScopeWithoutViewAny(t *testing.T) {
 	require.Nil(t, store.lastFilter.DoctorID)
 }
 
+func TestListStatusFilterRequiresAllScope(t *testing.T) {
+	svc, store, _, _, _, _, _ := appointmentFixture(t)
+	actor := testActor(uuid.New(), domain.PermAdminAppointmentsView)
+	for _, status := range []string{domain.AppointmentStatusConfirmed, domain.AppointmentStatusCancelled} {
+		_, _, err := svc.List(context.Background(), actor, service.ListAppointmentsInput{Scope: "all", Status: status, Limit: 25, Offset: 100})
+		require.NoError(t, err)
+		require.Equal(t, &status, store.lastFilter.Status)
+		require.Equal(t, 100, store.lastFilter.Offset)
+	}
+	for _, input := range []service.ListAppointmentsInput{{Scope: "all", Status: "unknown"}, {Scope: "upcoming", Status: "cancelled"}} {
+		_, _, err := svc.List(context.Background(), actor, input)
+		require.True(t, domain.IsCode(err, domain.CodeValidation))
+	}
+}
+
 func TestListScopesDoctorsToTheirOwnDiary(t *testing.T) {
 	svc, store, _, _, doctorID, _, _ := appointmentFixture(t)
 	actor := testActor(doctorID, domain.PermDoctorAppointmentsViewOwn)

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { canChangeAppointment, describeSlot } from '@/lib/appointment-display'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, CalendarDays, CalendarPlus, CalendarX2, Clock3, LoaderCircle, RotateCcw } from 'lucide-react'
 import { Avatar } from '@/components/arc/avatar/avatar'
-import { Tabs, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/arc/textarea/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '@/components/shared/page'
+import { EmptyState, ErrorState, LoadingState, PageHeader, Pagination, StatusBadge } from '@/components/shared/page'
 import { useToast } from '@/components/feedback/toast-provider'
 import { appointmentsApi } from '@/lib/api-clinic'
 import { ApiError } from '@/lib/api'
@@ -23,7 +24,10 @@ const TABS: Array<{ id: Scope; label: string }> = [
 
 export function MyAppointmentsPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { notify } = useToast()
-  const [tab, setTab] = useState<Scope>('upcoming')
+  const [tab, setTab] = useState<Scope>(() => new URLSearchParams(window.location.search).get('tab') === 'past' ? 'past' : 'upcoming')
+  const [offset, setOffset] = useState(0)
+  const request = useRef(0)
+  const cancelTrigger = useRef<HTMLButtonElement>(null)
   const [items, setItems] = useState<Appointment[]>([])
   const [counts, setCounts] = useState<Record<Scope, number>>({ upcoming: 0, past: 0, cancelled: 0 })
   const [loading, setLoading] = useState(true)
@@ -43,21 +47,25 @@ export function MyAppointmentsPage({ onNavigate }: { onNavigate: (path: string) 
   }, [])
 
   const loadTab = useCallback(async () => {
+    const id = ++request.current
     setLoading(true)
     setError(null)
     try {
-      const page = await appointmentsApi.list({ scope: tab, limit: 20 })
+      const page = await appointmentsApi.list({ scope: tab, limit: 20, offset })
+      if (request.current !== id) return
+      if (offset > 0 && offset >= page.pagination.total) setOffset(Math.max(0, offset - 20))
       setItems(page.data)
       setCounts(current => ({ ...current, [tab]: page.pagination.total }))
     } catch (err) {
+      if (request.current !== id) return
       setError(err instanceof Error ? err.message : 'Unable to load appointments.')
     } finally {
-      setLoading(false)
+      if (request.current === id) setLoading(false)
     }
-  }, [tab])
+  }, [tab, offset])
 
   useEffect(() => { void loadCounts().catch(() => undefined) }, [loadCounts])
-  useEffect(() => { void loadTab() }, [loadTab])
+  useEffect(() => { void loadTab(); return () => { request.current++ } }, [loadTab])
 
   function openCancel(appointment: Appointment) {
     setCancelling(appointment)
@@ -87,68 +95,76 @@ export function MyAppointmentsPage({ onNavigate }: { onNavigate: (path: string) 
 
   return <main className="mx-auto w-full max-w-[1200px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
     <PageHeader
-      eyebrow="Appointments"
       title="My appointments"
-      description="View upcoming visits, review past care, or release a slot back to the clinic."
-      actions={<Button className="gap-2" onClick={() => onNavigate('/book-appointment')}><CalendarPlus size={15} aria-hidden="true" /> Book new visit</Button>}
+      description="Review your visits and manage upcoming appointments."
+      actions={<Button className="gap-2" onClick={() => onNavigate('/book-appointment')}><CalendarPlus size={15} aria-hidden="true" /> Book appointment</Button>}
     />
 
-    <Tabs value={tab} onValueChange={value => setTab(value as Scope)} className="mb-5 w-full">
-      <TabsList aria-label="Appointment status" className="!flex !w-full !justify-between">
+    <Tabs value={tab} onValueChange={value => { setOffset(0); setTab(value as Scope) }} className="mb-5 w-full">
+      <TabsList aria-label="Appointment status" className="!flex !w-full !justify-between sm:!w-auto sm:!inline-flex">
         {TABS.map(entry => <TabsTrigger key={entry.id} value={entry.id} className="!min-w-0 !flex-1 text-xs">
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1 sm:gap-2">
             {entry.label}
-            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground">{counts[entry.id]}</span>
+            <span className="hidden rounded-full bg-muted px-1.5 py-0.5 text-xs min-[380px]:inline text-muted-foreground">{counts[entry.id]}</span>
           </span>
         </TabsTrigger>)}
       </TabsList>
+      <TabsContent value={tab} className="mt-5">
+        {error && <ErrorState message={error} onRetry={loadTab} />}
+        {loading && !error ? <LoadingState label="Loading appointments…" /> : null}
+        {!loading && !error && items.length === 0 ? <EmptyState
+          title={tab === 'upcoming' ? 'No upcoming appointments' : tab === 'past' ? 'No past visits yet' : 'No cancelled appointments'}
+          description={tab === 'upcoming' ? 'Book a visit with one of our doctors to get started.' : tab === 'past' ? 'Completed visits will appear here.' : 'Cancelled appointments will appear here.'}
+          action={tab === 'upcoming' ? <Button className="gap-2" onClick={() => onNavigate('/book-appointment')}><CalendarPlus size={15} aria-hidden="true" /> Book appointment</Button> : undefined}
+        /> : null}
+
+        {!loading && !error && items.length > 0 && <div className="space-y-3">
+          {items.map(appointment => <article key={appointment.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <Avatar name={`${appointment.doctor.first_name} ${appointment.doctor.last_name}`} size="lg" className="shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-semibold tracking-tight">Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}</h2>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{appointment.doctor.specialty}</span>
+                    <StatusBadge status={appointment.status} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1"><CalendarDays size={12} aria-hidden="true" /> {formatDate(appointment.start_time, CLINIC_TIMEZONE)}</span>
+                    <span className="inline-flex items-center gap-1"><Clock3 size={12} aria-hidden="true" /> {formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</span>
+                  </div>
+                  <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-sm leading-relaxed text-foreground">{appointment.reason}</p>
+                  {appointment.cancelled_at && <p className="mt-2 text-xs text-muted-foreground">Cancelled on {formatDate(appointment.cancelled_at, CLINIC_TIMEZONE, { weekday: undefined })}</p>}
+                </div>
+              </div>
+              {tab === 'upcoming' && canChangeAppointment(appointment) && <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
+                <Button variant="outline" size="sm" className="min-h-10 gap-1.5" onClick={() => onNavigate(`/book-appointment?reschedule=${appointment.id}`)}><RotateCcw size={13} aria-hidden="true" /> Reschedule</Button>
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={event => { cancelTrigger.current = event.currentTarget; openCancel(appointment) }}><CalendarX2 size={13} aria-hidden="true" /> Cancel</Button>
+              </div>}
+            </div>
+          </article>)}
+        </div>}
+
+
+        {!loading && !error && <Pagination limit={20} offset={offset} total={counts[tab]} onChange={setOffset} />}
+
+      </TabsContent>
     </Tabs>
 
-    {error && <ErrorState message={error} onRetry={loadTab} />}
-    {loading && !error ? <LoadingState label="Loading appointments…" /> : null}
-    {!loading && !error && items.length === 0 ? <EmptyState
-      title={tab === 'upcoming' ? 'No upcoming appointments' : tab === 'past' ? 'No past visits yet' : 'No cancelled appointments'}
-      description={tab === 'upcoming' ? 'Book a visit with one of our doctors to get started.' : tab === 'past' ? 'Completed visits will appear here.' : 'Cancelled appointments will appear here.'}
-      action={tab === 'upcoming' ? <Button className="gap-2" onClick={() => onNavigate('/book-appointment')}><CalendarPlus size={15} aria-hidden="true" /> Book appointment</Button> : undefined}
-    /> : null}
-
-    {!loading && !error && items.length > 0 && <div className="space-y-3">
-      {items.map(appointment => <article key={appointment.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <Avatar name={`${appointment.doctor.first_name} ${appointment.doctor.last_name}`} size="lg" className="shrink-0" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-sm font-semibold tracking-tight">Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-muted-foreground">{appointment.doctor.specialty}</span>
-                <StatusBadge status={appointment.status} />
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1"><CalendarDays size={12} aria-hidden="true" /> {formatDate(appointment.start_time, CLINIC_TIMEZONE)}</span>
-                <span className="inline-flex items-center gap-1"><Clock3 size={12} aria-hidden="true" /> {formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</span>
-              </div>
-              <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-relaxed text-foreground">{appointment.reason}</p>
-              {appointment.cancelled_at && <p className="mt-2 text-[10px] text-muted-foreground">Cancelled on {formatDate(appointment.cancelled_at, CLINIC_TIMEZONE, { weekday: undefined })}</p>}
-            </div>
-          </div>
-          {appointment.status === 'confirmed' && <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
-            {tab !== 'past' && <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onNavigate(`/book-appointment?reschedule=${appointment.id}`)}><RotateCcw size={13} aria-hidden="true" /> Reschedule</Button>}
-            <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => openCancel(appointment)}><CalendarX2 size={13} aria-hidden="true" /> Cancel</Button>
-          </div>}
-        </div>
-      </article>)}
-    </div>}
-
-
     <Dialog open={Boolean(cancelling)} onOpenChange={open => { if (!open && !submitting) setCancelling(null) }}>
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={event => {
+        if (cancelTrigger.current?.isConnected) {
+          event.preventDefault()
+          cancelTrigger.current.focus()
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>Cancel this appointment?</DialogTitle>
           <DialogDescription>
-            {cancelling ? `Dr. ${cancelling.doctor.first_name} ${cancelling.doctor.last_name} · ${formatDate(cancelling.start_time, CLINIC_TIMEZONE)}` : ''}
+            {cancelling ? `Dr. ${cancelling.doctor.first_name} ${cancelling.doctor.last_name} · ${describeSlot(cancelling, CLINIC_TIMEZONE)}` : ''}
           </DialogDescription>
         </DialogHeader>
-        {cancelError && <div className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{cancelError}</div>}
+        {cancelError && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{cancelError}</div>}
         <Textarea
           label="Reason for cancellation"
           placeholder="Let the clinic know why you need to cancel"

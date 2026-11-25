@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CalendarDays, Clock3 } from 'lucide-react'
 import { Calendar } from '@/components/arc/calendar/calendar'
 import { ErrorState, LoadingState } from '@/components/shared/page'
@@ -18,21 +18,26 @@ export function SlotPicker({ doctorId, selected, onSelect }: {
   const [error, setError] = useState<string | null>(null)
   const timeZone = availability?.timezone || DEFAULT_TIMEZONE
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await availabilityApi.get(doctorId, date)
-      setAvailability(result)
-    } catch (err) {
-      setAvailability(null)
-      setError(err instanceof ApiError ? err.message : 'Unable to load availability.')
-    } finally {
-      setLoading(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const result = await availabilityApi.get(doctorId, date)
+        if (active) setAvailability(result)
+      } catch (err) {
+        if (!active) return
+        setAvailability(null)
+        setError(err instanceof ApiError ? err.message : 'Unable to load availability.')
+      } finally {
+        if (active) setLoading(false)
+      }
     }
-  }, [date, doctorId])
-
-  useEffect(() => { void load() }, [load])
+    void load()
+    return () => { active = false }
+  }, [date, doctorId, attempt])
 
   const minDate = dateFromKey(dateKeyInZone(new Date(), timeZone))
   const maxDate = addDays(minDate, 90)
@@ -45,13 +50,13 @@ export function SlotPicker({ doctorId, selected, onSelect }: {
       <p className="mt-1 flex items-center gap-1 px-1 text-[9px] text-muted-foreground"><CalendarDays size={10} aria-hidden="true" /> {formatDate(`${date}T12:00:00Z`, timeZone)}</p>
     </div>
     <div className="min-h-[220px] rounded-xl border border-border p-3">
-      {loading ? <LoadingState label="Checking availability…" /> : error ? <ErrorState message={error} onRetry={load} /> : (availability?.slots.length ?? 0) === 0 ? <p className="py-8 text-center text-xs text-muted-foreground">No open times on this date.</p> : <div className="space-y-3">
+      {loading ? <LoadingState label="Checking availability…" /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : (availability?.slots.length ?? 0) === 0 ? <p className="py-8 text-center text-xs text-muted-foreground">No open times on this date.</p> : <div className="space-y-3">
         {[{ label: 'Morning', slots: morning }, { label: 'Afternoon', slots: afternoon }].map(group => group.slots.length > 0 && <div key={group.label}>
           <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{group.label}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {group.slots.map(slot => {
               const active = selected?.start_time === slot.start_time
-              return <button key={slot.start_time} type="button" onClick={() => onSelect(active ? null : slot)} className={`h-8 rounded-md border text-[10px] font-semibold ${active ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-border hover:border-neutral-400'}`}>{formatTime(slot.start_time, timeZone)}</button>
+              return <button aria-pressed={active} key={slot.start_time} type="button" onClick={() => onSelect(active ? null : slot)} className={`h-8 rounded-md border text-[10px] font-semibold ${active ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-border hover:border-neutral-400'}`}>{formatTime(slot.start_time, timeZone)}</button>
             })}
           </div>
         </div>)}

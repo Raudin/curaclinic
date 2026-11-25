@@ -64,9 +64,8 @@ export function AdminDashboardPage({ onNavigate }: { onNavigate: (path: string) 
 
   return <main className="mx-auto w-full max-w-[1300px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
     <PageHeader
-      eyebrow="Administration"
       title="Clinic overview"
-      description="A live snapshot of patients, doctors and the appointment diary."
+      description="Patients, doctors and appointments across the clinic."
       actions={canViewAppointments ? <Button className="gap-2" onClick={() => onNavigate('/admin/appointments')}><CalendarDays size={15} aria-hidden="true" /> Open appointments</Button> : undefined}
     />
     {error && <ErrorState message={error} onRetry={load} />}
@@ -81,25 +80,25 @@ export function AdminDashboardPage({ onNavigate }: { onNavigate: (path: string) 
         </div>)}
       </div></div>}
 
-      {canViewAppointments && <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.8fr)]">
-        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-base font-semibold">Today’s appointments</h2><p className="text-[11px] text-muted-foreground">{formatDate(new Date().toISOString(), CLINIC_TIMEZONE)}</p></div><Button variant="outline" size="sm" onClick={() => onNavigate('/admin/appointments')}>View all</Button></div>
+      {canViewAppointments && <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.8fr)]">
+        <section className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-base font-semibold">Today’s appointments</h2><p className="text-xs text-muted-foreground">{formatDate(new Date().toISOString(), CLINIC_TIMEZONE)}</p></div><Button variant="outline" size="sm" onClick={() => onNavigate('/admin/appointments')}>View all</Button></div>
           {today.length === 0 ? <EmptyState title="Nothing booked today" description="The clinic diary is clear for today." /> : <div className="divide-y divide-border/70">
             {today.map(appointment => <div key={appointment.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <div className="w-20 shrink-0 text-[11px] font-semibold">{formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</div>
-              <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{appointment.patient.first_name} {appointment.patient.last_name}</p><p className="truncate text-[10px] text-muted-foreground">Dr. {appointment.doctor.first_name} {appointment.doctor.last_name} · {appointment.reason}</p></div>
+              <div className="w-20 shrink-0 text-xs tabular-nums font-semibold">{formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</div>
+              <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{appointment.patient.first_name} {appointment.patient.last_name}</p><p className="truncate text-xs text-muted-foreground">Dr. {appointment.doctor.first_name} {appointment.doctor.last_name} · {appointment.reason}</p></div>
               <StatusBadge status={appointment.status} />
             </div>)}
           </div>}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
           <h2 className="text-base font-semibold">Next up</h2>
-          <p className="text-[11px] text-muted-foreground">The next five confirmed visits.</p>
+          <p className="text-xs text-muted-foreground">The next five confirmed visits.</p>
           {upcoming.length === 0 ? <EmptyState title="No upcoming visits" /> : <div className="mt-3 space-y-2">
             {upcoming.map(appointment => <div key={appointment.id} className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
-              <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-semibold">{appointment.patient.first_name} {appointment.patient.last_name}</p><p className="truncate text-[10px] text-muted-foreground">{formatDate(appointment.start_time, CLINIC_TIMEZONE, { weekday: 'short', year: undefined })} · {formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</p></div>
-              <span className="shrink-0 text-[9px] text-muted-foreground">Dr. {appointment.doctor.last_name}</span>
+              <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{appointment.patient.first_name} {appointment.patient.last_name}</p><p className="truncate text-xs text-muted-foreground">{formatDate(appointment.start_time, CLINIC_TIMEZONE, { weekday: 'short', year: undefined })} · {formatTimeRange(appointment.start_time, appointment.end_time, CLINIC_TIMEZONE)}</p></div>
+              <span className="max-w-[35%] truncate text-xs text-muted-foreground">Dr. {appointment.doctor.last_name}</span>
             </div>)}
           </div>}
         </section>

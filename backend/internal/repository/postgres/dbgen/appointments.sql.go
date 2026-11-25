@@ -331,7 +331,8 @@ WHERE a.deleted_at IS NULL
   AND ($6::timestamptz IS NULL OR a.end_time > $6)
 ORDER BY
   CASE WHEN $7::boolean THEN a.start_time END ASC,
-  CASE WHEN NOT $7::boolean THEN a.start_time END DESC
+  CASE WHEN NOT $7::boolean THEN a.start_time END DESC,
+  a.id ASC
 LIMIT $9 OFFSET $8
 `
 

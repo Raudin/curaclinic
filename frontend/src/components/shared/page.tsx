@@ -8,10 +8,10 @@ export function PageHeader({ eyebrow, title, description, actions }: {
   description?: string
   actions?: ReactNode
 }) {
-  return <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div>
+  return <header className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-b border-border pb-5 sm:mb-8 sm:pb-6">
+    <div className="min-w-0 flex-[1_1_24rem]">
       {eyebrow && <p className="text-xs font-medium text-primary">{eyebrow}</p>}
-      <h1 className="mt-1 text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-3xl">{title}</h1>
+      <h1 className="mt-1 text-balance text-3xl font-semibold leading-tight tracking-[-0.035em] text-foreground sm:text-4xl">{title}</h1>
       {description && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
     </div>
     {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -19,7 +19,7 @@ export function PageHeader({ eyebrow, title, description, actions }: {
 }
 
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
-  return <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-12 text-sm text-muted-foreground">
+  return <div role="status" className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-12 text-sm text-muted-foreground">
     <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
     {label}
   </div>
@@ -30,7 +30,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     <span className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive"><TriangleAlert size={18} aria-hidden="true" /></span>
     <div>
       <p className="text-sm font-semibold text-foreground">Something went wrong</p>
-      <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">{message}</p>
+      <p role="alert" className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">{message}</p>
     </div>
     {onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>}
   </div>
@@ -40,7 +40,7 @@ export function EmptyState({ title, description, action }: { title: string; desc
   return <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/50 px-6 py-12 text-center">
     <div>
       <p className="text-sm font-semibold text-foreground">{title}</p>
-      {description && <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">{description}</p>}
+      {description && <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>}
     </div>
     {action}
   </div>

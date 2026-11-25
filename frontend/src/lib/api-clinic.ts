@@ -1,5 +1,5 @@
 import { apiList, apiRequest, toQuery } from './api'
-import type { Appointment, AppointmentEvent, Availability, Doctor, Hold } from './api-types'
+import type { Appointment, AppointmentEvent, AppointmentStatus, Availability, Doctor, Hold } from './api-types'
 
 export const doctorsApi = {
   list(params?: { specialty?: string; accepting?: boolean }) {
@@ -48,6 +48,7 @@ export const holdsApi = {
 
 export const appointmentsApi = {
   list(params?: {
+    status?: AppointmentStatus
     scope?: 'upcoming' | 'past' | 'cancelled' | 'all'
     doctorId?: string
     patientId?: string
@@ -59,6 +60,7 @@ export const appointmentsApi = {
   }) {
     return apiList<Appointment>(`appointments${toQuery({
       scope: params?.scope,
+      status: params?.status,
       doctor_id: params?.doctorId,
       patient_id: params?.patientId,
       from: params?.from,

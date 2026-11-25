@@ -16,6 +16,10 @@ import { DEFAULT_TIMEZONE, addDays, clockToMinutes, dateFromKey, dateKey, dateKe
 
 const HOUR_HEIGHT = 56
 const DAY_MINUTES = 24 * 60
+
+function formatDayMinute(minute: number) {
+  return String(Math.floor(minute / 60)).padStart(2, '0') + ':' + String(Math.floor(minute % 60)).padStart(2, '0')
+}
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
 
 type Span = { top: number; bottom: number }
@@ -191,25 +195,37 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
 
   return <main className="mx-auto w-full max-w-[1440px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
     <PageHeader
-      eyebrow="Calendar"
-      title="My appointments"
+      title="Weekly calendar"
       description={doctor ? `Dr. ${doctor.first_name} ${doctor.last_name} · ${doctor.specialty}` : 'Your week at a glance.'}
       actions={<Button variant="outline" className="gap-2" onClick={() => onNavigate('/daily-agenda')}><CalendarDays size={15} aria-hidden="true" /> Daily agenda</Button>}
     />
 
-    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <section className="@container/week overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2.5 sm:px-4">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button variant="outline" size="sm" onClick={() => setWeekKey(weekStartKey(todayKey))}>Today</Button>
           <Button variant="ghost" size="icon" aria-label="Previous week" onClick={() => setWeekKey(key => dateKey(addDays(dateFromKey(key), -7)))}><ChevronLeft size={16} aria-hidden="true" /></Button>
           <Button variant="ghost" size="icon" aria-label="Next week" onClick={() => setWeekKey(key => dateKey(addDays(dateFromKey(key), 7)))}><ChevronRight size={16} aria-hidden="true" /></Button>
           <h2 className="ml-1 text-sm font-semibold tracking-tight sm:text-base" aria-live="polite">{weekLabel}</h2>
           {loading && <LoaderCircle size={14} className="ml-1 animate-spin text-muted-foreground" aria-label="Loading" />}
         </div>
-        <p className="text-[11px] text-muted-foreground">{confirmed} confirmed this week · {timeZone.replace('_', ' ')}</p>
+        <p className="text-xs text-muted-foreground">{confirmed} confirmed this week · {timeZone.replace('_', ' ')}</p>
       </div>
 
-      {error ? <div className="p-4"><ErrorState message={error} onRetry={load} /></div> : <div ref={scrollRef} className="max-h-[calc(100svh-260px)] min-h-[420px] overflow-auto overscroll-contain">
+      {error ? <div className="p-4"><ErrorState message={error} onRetry={load} /></div> : <>
+        <div className="divide-y divide-border @min-[760px]/week:hidden">
+          {loading ? <p role="status" className="p-4 text-sm">Loading appointments…</p> : columns.map(column => <section key={column.key} className="p-4">
+            <h3 className="mb-2 text-sm font-semibold">{formatDate(column.bounds.from, timeZone, { year: undefined })}</h3>
+            {column.hours.length > 0 && <p className="mb-2 text-xs text-muted-foreground">Working hours · {workingHours.filter(hour => hour.weekday === column.weekday).map(hour => hour.start_time.slice(0, 5) + '–' + hour.end_time.slice(0, 5)).join(', ')}</p>}
+            {column.events.map(({ item }) => <button key={item.id} type="button" onClick={() => openDetails(item)} className="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 rounded-md py-2 text-left hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="min-w-0 break-words"><span className="block text-xs tabular-nums text-muted-foreground">{formatTimeRange(item.start_time, item.end_time, timeZone)}</span>{item.patient.first_name} {item.patient.last_name}</span>
+              <StatusBadge status={item.status} />
+            </button>)}
+            {column.blocked.map(({ block, span }) => <p key={block.id} className="my-1 rounded-md bg-muted p-2 text-xs">Blocked · {formatDayMinute(span.top)}–{formatDayMinute(span.bottom)}{block.reason && ' · ' + block.reason}</p>)}
+            {!column.events.length && !column.blocked.length && <p className="text-xs text-muted-foreground">No visits or blocks.</p>}
+          </section>)}
+        </div>
+        <div ref={scrollRef} className="hidden @min-[760px]/week:block max-h-[calc(100svh-260px)] min-h-[420px] overflow-auto overscroll-contain">
         <div className="min-w-[760px]">
           {/* Day headers stay pinned while the hours scroll beneath them. */}
           <div className="sticky top-0 z-20 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border bg-card">
@@ -218,7 +234,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
               const isToday = column.key === todayKey
               const date = dateFromKey(column.key)
               return <div key={column.key} className="flex flex-col items-center gap-0.5 border-l border-border/70 py-2" aria-current={isToday ? 'date' : undefined}>
-                <span className={`text-[10px] font-semibold uppercase tracking-[0.1em] ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>{new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(date)}</span>
+                <span className={`text-xs font-semibold uppercase tracking-[0.1em] ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>{new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(date)}</span>
                 <span className={`flex size-8 items-center justify-center rounded-full text-base font-semibold ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{date.getDate()}</span>
               </div>
             })}
@@ -227,7 +243,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
           <div className="relative grid grid-cols-[56px_repeat(7,minmax(0,1fr))]" style={{ height: HOUR_HEIGHT * 24 }}>
             <div className="sticky left-0 z-10 bg-card">
               {HOURS.map(hour => <div key={hour} className="relative" style={{ height: HOUR_HEIGHT }}>
-                {hour > 0 && <span className="absolute -top-2 right-2 text-[10px] tabular-nums text-muted-foreground">{String(hour).padStart(2, '0')}:00</span>}
+                {hour > 0 && <span className="absolute -top-2 right-2 text-xs tabular-nums text-muted-foreground">{String(hour).padStart(2, '0')}:00</span>}
               </div>)}
             </div>
 
@@ -240,7 +256,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
 
                 {column.blocked.map(({ block, span }) => <div
                   key={block.id}
-                  className="absolute inset-x-0.5 overflow-hidden rounded-md border border-border bg-[repeating-linear-gradient(135deg,var(--muted)_0_6px,transparent_6px_12px)] px-1.5 py-1 text-[10px] text-muted-foreground"
+                  className="absolute inset-x-0.5 overflow-hidden rounded-md border border-border bg-[repeating-linear-gradient(135deg,var(--muted)_0_6px,transparent_6px_12px)] px-1.5 py-1 text-xs text-muted-foreground"
                   style={{ top: span.top / 60 * HOUR_HEIGHT, height: (span.bottom - span.top) / 60 * HOUR_HEIGHT }}
                   title={`Blocked${block.reason ? ` · ${block.reason}` : ''}`}
                 ><span className="font-semibold">Blocked</span>{block.reason ? ` · ${block.reason}` : ''}</div>)}
@@ -254,7 +270,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
                     key={item.id}
                     type="button"
                     onClick={() => openDetails(item)}
-                    className={`absolute z-[1] flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm outline-none transition hover:z-[2] hover:shadow-md focus-visible:z-[2] focus-visible:ring-2 focus-visible:ring-ring ${cancelled ? 'border-muted-foreground/40 bg-muted text-muted-foreground' : 'border-primary bg-[color-mix(in_oklab,var(--primary)_16%,var(--card))] text-foreground'} ${past && !cancelled ? 'opacity-70' : ''}`}
+                    className={`absolute z-[1] flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left text-xs leading-tight shadow-sm outline-none transition hover:z-[2] hover:shadow-md focus-visible:z-[2] focus-visible:ring-2 focus-visible:ring-ring ${cancelled ? 'border-muted-foreground/40 bg-muted text-muted-foreground' : 'border-primary bg-[color-mix(in_oklab,var(--primary)_16%,var(--card))] text-foreground'} ${past && !cancelled ? 'opacity-70' : ''}`}
                     style={{ top: span.top / 60 * HOUR_HEIGHT + 1, height: Math.max(height - 2, 18), left: `calc(${lane / lanes * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)` }}
                     aria-label={`${name}, ${formatTimeRange(item.start_time, item.end_time, timeZone)}${cancelled ? ', cancelled' : ''}`}
                   >
@@ -262,8 +278,8 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
                       ? <span className={`truncate ${cancelled ? 'line-through' : ''}`}><span className="font-semibold">{name}</span> · {formatTime(item.start_time, timeZone)}</span>
                       : <>
                         <span className={`truncate font-semibold ${cancelled ? 'line-through' : ''}`}>{name}</span>
-                        <span className="truncate text-[10px] text-muted-foreground">{formatTimeRange(item.start_time, item.end_time, timeZone)}</span>
-                        {height >= 64 && <span className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{item.reason}</span>}
+                        <span className="truncate text-xs text-muted-foreground">{formatTimeRange(item.start_time, item.end_time, timeZone)}</span>
+                        {height >= 64 && <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.reason}</span>}
                       </>}
                   </button>
                 })}
@@ -276,7 +292,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
             })}
           </div>
         </div>
-      </div>}
+      </div></>}
     </section>
 
     <Dialog open={Boolean(selected)} onOpenChange={open => { if (!open && !submitting) setSelected(null) }}>
@@ -284,7 +300,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
         {selected && <>
           <DialogHeader>
             <DialogTitle>{cancelMode ? 'Cancel this visit?' : `${selected.patient.first_name} ${selected.patient.last_name}`}</DialogTitle>
-            <DialogDescription>{formatDate(selected.start_time, timeZone, { year: undefined })} · {formatTimeRange(selected.start_time, selected.end_time, timeZone)}</DialogDescription>
+            <DialogDescription>{cancelMode && selected.patient.first_name + ' ' + selected.patient.last_name + ' · '}{formatDate(selected.start_time, timeZone, { year: undefined })} · {formatTimeRange(selected.start_time, selected.end_time, timeZone)}</DialogDescription>
           </DialogHeader>
           {cancelMode ? <>
             {cancelError && <div className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{cancelError}</div>}
@@ -303,7 +319,7 @@ export function WeekCalendarPage({ onNavigate }: { onNavigate: (path: string) =>
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Reason for visit</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Reason for visit</p>
               <p className="mt-1 text-sm leading-relaxed">{selected.reason}</p>
             </div>
             {selected.status === 'confirmed' && new Date(selected.start_time).getTime() > now && (canReschedule || canCancel) && <DialogFooter>

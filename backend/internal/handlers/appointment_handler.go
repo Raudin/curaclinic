@@ -84,6 +84,7 @@ func (h *Handlers) ListAppointments(c *gin.Context) {
 	limit, offset := parsePagination(c)
 	items, total, err := h.Appointments.List(c.Request.Context(), actorOf(c), service.ListAppointmentsInput{
 		Scope:     c.Query("scope"),
+		Status:    c.Query("status"),
 		As:        c.Query("as"),
 		DoctorID:  doctorID,
 		PatientID: patientID,

@@ -1,3 +1,5 @@
+import { Input } from '@/components/arc/input/input'
+import { Textarea } from '@/components/arc/textarea/textarea'
 import { useEffect, useState, type FormEvent } from 'react'
 import { AlertCircle, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -119,22 +121,22 @@ export function DoctorFormDialog({ mode, doctor, open, onOpenChange, onSaved }: 
         <DialogTitle>{mode === 'create' ? 'Add a doctor' : 'Edit doctor profile'}</DialogTitle>
         <DialogDescription>{mode === 'create' ? 'Create the clinician account and public profile.' : `${doctor?.first_name ?? ''} ${doctor?.last_name ?? ''}`}</DialogDescription>
       </DialogHeader>
-      {error && <div className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="shrink-0" aria-hidden="true" />{error}</div>}
+      {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"><AlertCircle size={14} className="shrink-0" aria-hidden="true" />{error}</div>}
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
         {mode === 'create' && <>
-          <input value={firstName} onChange={event => setFirstName(event.target.value)} placeholder="First name" required className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-          <input value={lastName} onChange={event => setLastName(event.target.value)} placeholder="Last name" required className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-          <input value={email} onChange={event => setEmail(event.target.value)} type="email" placeholder="Email" required className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-          <input value={password} onChange={event => setPassword(event.target.value)} type="password" placeholder="Password (min 12)" minLength={12} required className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-          <input value={phone} onChange={event => setPhone(event.target.value)} placeholder="Phone (optional)" className="h-9 rounded-md border border-border bg-background px-2 text-xs sm:col-span-2" />
+          <Input label="First name" value={firstName} onChange={event => setFirstName(event.target.value)} required />
+          <Input label="Last name" value={lastName} onChange={event => setLastName(event.target.value)} required />
+          <Input label="Email" value={email} onChange={event => setEmail(event.target.value)} type="email" required />
+          <Input label="Password (12 characters minimum)" value={password} onChange={event => setPassword(event.target.value)} type="password" minLength={12} required />
+          <Input label="Phone (optional)" value={phone} onChange={event => setPhone(event.target.value)} />
         </>}
-        <input value={specialty} onChange={event => setSpecialty(event.target.value)} placeholder="Specialty" required className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-        <input value={languages} onChange={event => setLanguages(event.target.value)} placeholder="Languages (comma separated)" className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-        <input value={experience} onChange={event => setExperience(event.target.value)} type="number" min={0} max={80} placeholder="Years of experience" className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-        <input value={slotMinutes} onChange={event => setSlotMinutes(event.target.value)} type="number" min={5} max={180} step={5} placeholder="Slot minutes" className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
-        <input value={timezone} onChange={event => setTimezone(event.target.value)} placeholder="Timezone" className="h-9 rounded-md border border-border bg-background px-2 text-xs" />
+        <Input label="Specialty" value={specialty} onChange={event => setSpecialty(event.target.value)} required />
+        <Input label="Languages (comma separated)" value={languages} onChange={event => setLanguages(event.target.value)} />
+        <Input label="Years of experience" value={experience} onChange={event => setExperience(event.target.value)} type="number" min={0} max={80} />
+        <Input label="Visit length (minutes)" value={slotMinutes} onChange={event => setSlotMinutes(event.target.value)} type="number" min={5} max={180} step={5} />
+        <Input label="Timezone" value={timezone} onChange={event => setTimezone(event.target.value)} />
         <label className="flex items-center justify-between gap-2 rounded-md border border-border px-2 text-xs">Accepting patients<input type="checkbox" checked={accepting} onChange={event => setAccepting(event.target.checked)} className="size-3.5 accent-neutral-950" /></label>
-        <textarea value={bio} onChange={event => setBio(event.target.value)} placeholder="Professional bio" rows={3} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs sm:col-span-2" />
+        <div className="sm:col-span-2"><Textarea label="Professional bio" value={bio} onChange={event => setBio(event.target.value)} rows={3} /></div>
         {showRoleEditor && <fieldset className="space-y-2 rounded-xl border border-border p-3 sm:col-span-2" disabled={rolesLoading || saving}>
           <legend className="px-1 text-xs font-semibold">Account roles</legend>
           <p className="text-[11px] text-muted-foreground">Choose the roles assigned to this account.</p>

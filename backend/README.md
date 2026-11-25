@@ -248,7 +248,7 @@ Base path: `/api`. Responses use `{ "data": ... }`; lists add `pagination`; erro
 
 Error codes: `validation_failed` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `conflict` / `slot_unavailable` / `hold_expired` / `hold_not_owned` (409), `rate_limited` (429), `internal_error` (500).
 
-List endpoints accept pagination (`limit`, `offset`). `GET /appointments` additionally supports `scope=upcoming|past|cancelled|all`, `from`, `to`, `order=asc|desc`, `doctor_id`, `patient_id` and `as=patient|doctor|admin` for users linked to multiple account records. `GET /users` supports `role` and `search`. Doctors are automatically scoped to their own diary; `admin.appointments.view_any` is required to see the whole clinic diary.
+List endpoints accept pagination (`limit`, `offset`). `GET /appointments` additionally supports `scope=upcoming|past|cancelled|all`, `from`, `to`, `order=asc|desc`, `doctor_id`, `patient_id` and `as=patient|doctor|admin` for users linked to multiple account records. With `scope=all`, the optional `status=confirmed|cancelled` filter applies to both the page and the total count. `GET /users` supports `role` and `search`. Doctors are automatically scoped to their own diary; `admin.appointments.view_any` is required to see the whole clinic diary.
 
 ## Tests
 

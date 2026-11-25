@@ -12,6 +12,7 @@ import (
 // ListAppointmentsInput narrows an appointment listing.
 type ListAppointmentsInput struct {
 	Scope     string
+	Status    string
 	As        string
 	DoctorID  *uuid.UUID
 	PatientID *uuid.UUID
@@ -71,6 +72,9 @@ func (s *AppointmentService) List(ctx context.Context, actor *domain.Actor, inpu
 	if scope == "" {
 		scope = "upcoming"
 	}
+	if input.Status != "" && scope != "all" {
+		return nil, 0, domain.ValidationField("status", "requires scope=all")
+	}
 	switch scope {
 	case "upcoming":
 		status := domain.AppointmentStatusConfirmed
@@ -90,7 +94,12 @@ func (s *AppointmentService) List(ctx context.Context, actor *domain.Actor, inpu
 		status := domain.AppointmentStatusCancelled
 		filter.Status = &status
 	case "all":
-		// no status constraint
+		if input.Status != "" {
+			if input.Status != domain.AppointmentStatusConfirmed && input.Status != domain.AppointmentStatusCancelled {
+				return nil, 0, domain.ValidationField("status", "must be confirmed or cancelled")
+			}
+			filter.Status = &input.Status
+		}
 	default:
 		return nil, 0, domain.ValidationField("scope", "must be upcoming, past, cancelled or all")
 	}

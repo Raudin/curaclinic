@@ -93,8 +93,7 @@ export function AuthenticatedShell({ pathname, onNavigate }: { pathname: string;
       {variant === 'admin' ? <AdminSidebar pathname={pathname} onNavigate={onNavigate} /> : variant === 'clinician' ? <ClinicianSidebar pathname={pathname} onNavigate={onNavigate} /> : <PatientSidebar pathname={pathname} onNavigate={onNavigate} />}
       <SidebarInset className="h-svh min-h-0 min-w-0 overflow-hidden bg-[#f7f8f7]">
         <AppTopbar variant={variant} pathname={pathname} onNavigate={onNavigate} />
-        <div className="h-[72px] shrink-0" aria-hidden="true" />
-        <div className="patient-page-scroll">{content}</div>
+        <div key={pathname} className="patient-page-scroll">{content}</div>
       </SidebarInset>
     </SidebarProvider>
   </TooltipProvider>

@@ -19,7 +19,6 @@ export function ScheduleAvailabilityPage() {
 
   return <main className="mx-auto w-full max-w-[1300px] px-4 pb-12 pt-7 sm:px-7 sm:pt-9 lg:px-10">
     <PageHeader
-      eyebrow="Availability"
       title="Schedule & availability"
       description="Set the hours patients can book and block time for lunch, leave or other commitments."
     />

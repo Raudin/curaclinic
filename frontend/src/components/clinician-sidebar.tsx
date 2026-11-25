@@ -9,7 +9,7 @@ type ClinicianSidebarProps = {
 
 const clinicianLinks: SidebarLink[] = [
   { label: 'Daily agenda', path: '/daily-agenda', icon: CalendarDays },
-  { label: 'My appointments', path: '/doctor-appointments', icon: CalendarRange },
+  { label: 'Weekly calendar', path: '/doctor-appointments', icon: CalendarRange },
   { label: 'Schedule & availability', path: '/schedule-availability', icon: ClipboardList },
 ]
 

@@ -41,7 +41,8 @@ WHERE a.deleted_at IS NULL
   AND (sqlc.narg('ends_after')::timestamptz IS NULL OR a.end_time > sqlc.narg('ends_after'))
 ORDER BY
   CASE WHEN sqlc.arg('ascending')::boolean THEN a.start_time END ASC,
-  CASE WHEN NOT sqlc.arg('ascending')::boolean THEN a.start_time END DESC
+  CASE WHEN NOT sqlc.arg('ascending')::boolean THEN a.start_time END DESC,
+  a.id ASC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: CountAppointments :one
